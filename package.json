@@ -1,0 +1,38 @@
+{
+  "name": "suplex",
+  "description": "A simple, yet efficient, store management library",
+  "version": "0.1.0",
+  "author": "Alvin Chan <no@email.com>",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts"
+  ],
+  "lint-staged": {
+    "*.ts": [
+      "prettier --write --no-semi --single-quote",
+      "git add"
+    ]
+  },
+  "devDependencies": {
+    "@types/isomorphic-fetch": "0.0.34",
+    "@types/nock": "^8.2.1",
+    "ava": "^0.20.0",
+    "husky": "^0.14.3",
+    "lint-staged": "^4.0.1",
+    "nock": "^9.0.13",
+    "prettier": "^1.5.2",
+    "typescript": "^2.4.1"
+  },
+  "dependencies": {
+    "isomorphic-fetch": "^2.2.1"
+  },
+  "scripts": {
+    "start": "tsc --watch & ava --watch & wait",
+    "test": "tsc && ava",
+    "precommit": "lint-staged",
+    "prepare": "tsc --declaration && ava"
+  }
+}
