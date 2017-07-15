@@ -2,16 +2,18 @@
 import * as fetch from 'isomorphic-fetch'
 
 // Interfaces
-export interface Stores {
-  [storeName: string]: Store
+export type Constructor<T = object> = new (...args: any[]) => T
+
+export interface IModel extends Constructor {
+  [key: string]: any
 }
 
 export interface JsonObject {
   [key: string]: any
 }
 
-interface Cache {
-  [key: number]: Model
+interface Cache<T> {
+  [key: string]: T
 }
 
 interface PendingRequests {
@@ -26,109 +28,79 @@ class FetchError extends Error {
   }
 }
 
-/** Base model */
-export class Model {
-  [key: string]: any
+/** SuplexStore */
+export class SuplexStore {
+  /** The model's class declaration */
+  private Model: IModel
 
-  id: number = 0
+  /** Property name of the model's identifier */
+  private modelId: string
 
-  protected _stores: Stores
+  /** Stores all instances of the models */
+  private cache: Cache<IModel> = {}
 
-  /**
-   * Model constructor
-   *
-   * @param {Object.<string, Store>} stores - A dictionary of stores
-   */
-  constructor(stores = {}) {
-    this._stores = stores
+  /** Keeps track of pending HTTP requests */
+  private pendingRequests: PendingRequests = {}
+
+  constructor(Model: IModel, modelId: string) {
+    this.Model = Model
+    this.modelId = modelId
   }
 
   /**
-   * Updates property values in the model.
+   * Retrieve a model and, optionally, update its properties
    *
-   * @param {Object} props - Properties values to update
-   * @return {Model} This model's instance
-   */
-  update(props: JsonObject): Model {
-    Object.keys(props).forEach((key: string) => {
-      if (this.hasOwnProperty(key)) {
-        this[key] = props[key]
-      }
-    })
-
-    return this
-  }
-}
-
-/** Base store */
-export class Store {
-  protected Model = Model
-
-  protected _stores: Stores = {}
-  private _cache: Cache = {}
-  private _pendingRequests: PendingRequests = {}
-
-  /**
-   * Store constructor
-   *
-   * @param {Object.<string, Store>} stores - A dictionary of stores
-   */
-  constructor(stores = {}) {
-    this._stores = stores
-  }
-
-  /**
-   * Load a model from cache and update its properties
-   *
-   * @param {number} key - The cached model's unique identifier
-   * @param {Object} [props] - Properties values to update
+   * @param {string} id - Value of the model's identifier
+   * @param {Object} [props] - Properties to update
    * @return {Model} The model's instance
    */
-  _load(key: number, props?: JsonObject): Model {
-    if (typeof this._cache[key] === 'undefined') {
-      this._cache[key] = new this.Model(this._stores)
+  get(id: string, props?: JsonObject): IModel {
+    if (typeof this.cache[id] === 'undefined') {
+      this.cache[id] = new this.Model() as IModel
     }
 
     if (props) {
-      this._cache[key].update(props)
+      Object.keys(props).forEach(key => {
+        if (this.cache[id].hasOwnProperty(key)) {
+          this.cache[id][key] = props[key]
+        }
+      })
     }
 
-    return this._cache[key]
+    return this.cache[id]
   }
 
   /**
-   * Transform a JSON object before storing into cache
+   * Transform an object's properties before injecting into the model
    *
-   * @callback Store~transform
-   * @param {Object} instance - A JSON object that represents a model instance
-   * @return {Object} A new JSON object with updated properties
+   * @callback SuplexStore~transform
+   * @param {Object} o - The input object
+   * @return {Object} The modified object
    */
   /**
-   * Load a collection of objects into cache and return their models
+   * Load an array of objects into models
    *
-   * @param {Object[]} collection - A collection of JSON objects that represent models
-   * @param {Store~transform} [transform] - Callback that transforms a JSON object before caching (e.g. rename properties, filter values)
-   * @return {Model[]} A collection of models
+   * @param {Object[]} collection - An array of objects
+   * @param {SuplexStore~transform} [transform] - Callback to transform an object's properties (e.g. rename properties, filter values)
+   * @return {Model[]} An array of models
    */
-  _map(
+  load(
     collection: JsonObject[],
-    transform = (instance: JsonObject): JsonObject => instance
-  ): Model[] {
-    return collection.map((instance: JsonObject) =>
-      this._load(instance.id, transform(instance))
-    )
+    transform = (o: JsonObject): JsonObject => o
+  ): IModel[] {
+    return collection.map(o => this.get(o[this.modelId], transform(o)))
   }
 
   /**
    * Fetch a URL resource
    *
-   * @param {(string|Object)} request - A Request object or string to a URL resource
-   * @return {Object} A response object with the body parsed and available
-   * @throws {FetchError} Will throw if a duplicate request is still pending
+   * @param {(string|Object)} request - A string or request object for a URL resource
+   * @return {Object} A response object with the body parsed
+   * @throws {FetchError} Thrown if a duplicate request is pending
    */
-  async _fetch(request: Request | string) {
+  async fetch(request: string | Request) {
     const key = JSON.stringify(request)
-    const pendingRequests = this._pendingRequests
+    const pendingRequests = this.pendingRequests
 
     try {
       if (pendingRequests[key]) {
@@ -139,7 +111,8 @@ export class Store {
 
       const response = await fetch(request)
       const body =
-        response.headers.get('Content-Type') === 'application/json'
+        (response.headers.get('Content-Type') || '')
+          .indexOf('application/json') > -1
           ? await response.json()
           : await response.text()
 
@@ -155,3 +128,6 @@ export class Store {
     }
   }
 }
+
+export default (Model: IModel, modelId: string) =>
+  new SuplexStore(Model, modelId)

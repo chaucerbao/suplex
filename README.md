@@ -8,67 +8,53 @@ npm install --save suplex
 ```
 
 ## Quick Start
-Create your own models and stores that extend the Suplex `Model` and `Store`.
+Create your own models and stores, then attach Suplex
 
 ```
-import { Model, Store } from 'suplex'
+import Suplex from 'suplex'
 
-// Start by defining a model for your resource, let's make a User model
-class User extends Model {
+// Start by defining a model
+class User {
+  id: 0
   name: ''
   email: ''
 }
 
-// Then create a store to manage your models
-class UserStore extends Store {
-  // Tell the store about the model it's responsible for
-  Model = User
+// Then, create a store to manage those models
+class UserStore {
+  suplex: any
+
+  constructor() {
+    this.suplex = suplex(User, 'id')
+  }
 
   // Let's make an array to hold all the users
-  all: []
+  all = []
 
-  // This will fetch an array of users from some API
-  async getAll() {
-    // Call the API
-    const response = await this._fetch('http://jsonplaceholder.typicode.com/users')
-
-    // Load each object returned into User models, and store it in the `all` array
-    this.all = this._map(response.body)
+  // And a function to fetch a list of users from some API
+  async fetchAll() {
+    const response = await this.suplex.fetch('http://jsonplaceholder.typicode.com/users')
+    this.all = this.suplex.load(response.body)
   }
 }
 
-// Now that you've defined your model and store, let's use them!
-// Create an object to hold all your stores
-const stores = {}
+// Now, use it!
+const userStore = new UserStore()
 
-// Load it with all the stores you want
-Object.assign(stores, {
-  userStore: new UserStore(stores)
-  // ...
-})
+await userStore.fetchAll()
 
-// Finally, you can access your data anywhere through your `stores` object!
-async function start() {
-  await stores.userStore.getAll()
-
-  console.log(stores.userStore.all)
-}
-
-start()
+console.log(userStore.all)
 ```
 
 ## Usage
 
-### Model methods
-update(props)
-Updates properties inside the model. Only properties that are defined in the model will be updated. Extra properties are ignored.
+Suplex(Store, [Model, keyProp])
 
-### Store methods
-_load(key, [props])
-Get a model from the store's internal cache, and update its properties. If no model is found with the `key`, a new model is created.
+get(id, [props])
+Retrieves (creates if necessary) a model from the store's internal cache, and update its properties.
 
-_map(collection, [transform])
-Loops over a JSON array of objects, loading each object in the store's internal cache. If a `transform` callback is provided, each object will be run through the callback before being loaded into a model. This is useful if you need to process the JSON from an API before consuming it in your model (e.g. rename properties, filter values).
+load(collection, [transform])
+Loops over an array of objects, injecting each object into a model and caching it. If a `transform` callback is provided, each object will be run through the callback before being loaded into a model. This is useful if you need to process a JSON response from an API before consuming it (e.g. rename properties, filter values).
 
-_fetch(request)
-Makes an API call and returns the response. If it detects a duplicate API call before the first one completes, it will throw an error.
+fetch(request)
+Makes an API call and returns the response. If there's a duplicate request while the first one is still pending, an error is thrown.

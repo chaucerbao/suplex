@@ -3,166 +3,169 @@ import test from 'ava'
 import * as nock from 'nock'
 
 // Test subject
-import { Model, Store } from './'
+import suplex from './'
 
 // Mocks
-class MockModel extends Model {
-  mockProp: string = 'value'
-
-  get stores() {
-    return this._stores
-  }
+class MockModel {
+  id: number = 0
+  mockProp: boolean = false
 }
 
-class MockStore extends Store {
-  Model = MockModel
+test('Create a SuplexStore instance', t => {
+  const store = suplex(MockModel, 'id')
 
-  get stores() {
-    return this._stores
-  }
-}
-
-// Create a `stores` collection
-const stores = {}
-Object.assign(stores, {
-  mock: new MockStore(stores)
+  t.is(store.constructor.name, 'SuplexStore')
 })
 
-// Model
-test('Construct a new model', t => {
-  const model = new MockModel(stores)
+test('Retrieve different instances of a model when given different keys', t => {
+  const store = suplex(MockModel, 'id')
 
-  t.is(model.stores, stores)
+  const modelA = store.get('A')
+  const modelB = store.get('B')
+
+  t.deepEqual(modelB, modelA)
+  t.not(modelB, modelA)
 })
 
-test("Update a model's properties", t => {
-  const model = new MockModel(stores)
+test('Create and retrieve the same instance of a model', t => {
+  const store = suplex(MockModel, 'id')
 
-  t.is(model.mockProp, 'value')
-  t.is(model.invalidProp, undefined)
+  const modelA = store.get('key')
+  const modelB = store.get('key')
 
-  const result = model.update({
-    mockProp: 'updated',
-    invalidProp: true
+  t.is(modelB, modelA)
+})
+
+test('Retrieve and update properties of a model', t => {
+  const store = suplex(MockModel, 'id')
+
+  const modelA = store.get('key')
+  t.false(modelA.mockProp)
+
+  const modelB = store.get('key', { mockProp: true })
+  t.true(modelB.mockProp)
+})
+
+test('Update only properties that exist in the model', t => {
+  const store = suplex(MockModel, 'id')
+
+  const modelA = store.get('key')
+  t.false(modelA.mockProp)
+  t.is(modelA.invalidProp, undefined)
+
+  const modelB = store.get('key', { mockProp: true, invalidProp: true })
+  t.true(modelB.mockProp)
+  t.is(modelA.invalidProp, undefined)
+})
+
+test('Return a model for each object in an array', t => {
+  const store = suplex(MockModel, 'id')
+  const json = [{ id: 1, mockProp: true }, { id: 2, mockProp: false }]
+
+  const [modelA, modelB] = store.load(json)
+
+  t.true(modelA instanceof MockModel)
+  t.is(modelA.id, 1)
+  t.true(modelA.mockProp)
+
+  t.true(modelB instanceof MockModel)
+  t.is(modelB.id, 2)
+  t.false(modelB.mockProp)
+})
+
+test('Return a model for each object in an array after a transform', t => {
+  const store = suplex(MockModel, 'id')
+  const json = [{ id: 1, invalidProp: true }, { id: 2, invalidProp: false }]
+
+  const transform = (model: { [key: string]: any }) => ({
+    id: model.id,
+    mockProp: !model.invalidProp
   })
 
-  t.is(result, model)
-  t.is(model.mockProp, 'updated')
-  t.is(model.invalidProp, undefined)
+  const [modelA, modelB] = store.load(json, transform)
+
+  t.true(modelA instanceof MockModel)
+  t.is(modelA.id, 1)
+  t.false(modelA.mockProp)
+
+  t.true(modelB instanceof MockModel)
+  t.is(modelB.id, 2)
+  t.true(modelB.mockProp)
 })
 
-// Stores
-test('Construct a new store', t => {
-  const store = new MockStore(stores)
-
-  t.is(store.stores, stores)
-})
-
-test('Set and get a single model from cache', t => {
-  const store = new MockStore(stores)
-
-  const model = store._load(1, { mockProp: 'one' })
-
-  t.is(model.mockProp, 'one')
-
-  const result = store._load(1)
-
-  t.is(result, model)
-  t.is(result.mockProp, 'one')
-})
-
-test('Load a collection of models into cache', t => {
-  const store = new MockStore(stores)
-
-  const collection = [
-    {
-      id: 1,
-      mockProp: 'one'
-    },
-    {
-      id: 2,
-      mockProp: 'two'
-    }
-  ]
-
-  const result = store._map(collection)
-
-  t.is(result.length, 2)
-  t.true(result[0] instanceof MockModel)
-  t.is(result[0].id, 1)
-  t.is(result[0].mockProp, 'one')
-  t.true(result[1] instanceof MockModel)
-  t.is(result[1].id, 2)
-  t.is(result[1].mockProp, 'two')
-})
-
-test('Load a collection of models into cache, with a transform', t => {
-  const store = new MockStore(stores)
-
-  const collection = [
-    {
-      id: 1,
-      badPropName: 'ONE'
-    },
-    {
-      id: 2,
-      badPropName: 'TWO'
-    }
-  ]
-
-  const result = store._map(collection, model => ({
-    id: model.id,
-    mockProp: model.badPropName.toLowerCase()
-  }))
-
-  t.is(result.length, 2)
-  t.true(result[0] instanceof MockModel)
-  t.is(result[0].id, 1)
-  t.is(result[0].mockProp, 'one')
-  t.true(result[1] instanceof MockModel)
-  t.is(result[1].id, 2)
-  t.is(result[1].mockProp, 'two')
-})
-
-test('Fetches a JSON resource', async t => {
-  const store = new MockStore(stores)
+test('Return a JSON response from an API call', async t => {
+  const store = suplex(MockModel, 'id')
   const http = nock('http://domain.com')
-    .get('/resource/1')
-    .reply(200, { id: 1, mockProp: 'one' })
+    .get('/')
+    .reply(200, { id: 1, mockProp: true })
 
-  const response = await store._fetch('http://domain.com/resource/1')
+  const response = await store.fetch('http://domain.com/')
 
-  t.is(response.status, 200)
-  t.deepEqual(response.body, { id: 1, mockProp: 'one' })
+  t.true(response.ok)
+  t.deepEqual(response.body, { id: 1, mockProp: true })
   http.done()
 
   nock.cleanAll()
 })
 
-test('Fetches a text resource', async t => {
-  const store = new MockStore(stores)
-  const http = nock('http://domain.com')
-    .get('/resource/1')
-    .reply(200, 'Text resource')
+test('Return a text response from an HTTP call', async t => {
+  const store = suplex(MockModel, 'id')
+  const http = nock('http://domain.com').get('/').reply(200, 'Text')
 
-  const response = await store._fetch('http://domain.com/resource/1')
+  const response = await store.fetch('http://domain.com/')
 
-  t.is(response.status, 200)
-  t.is(response.body, 'Text resource')
+  t.true(response.ok)
+  t.is(response.body, 'Text')
   http.done()
 
   nock.cleanAll()
 })
 
-test('Throws a FetchError on duplicate requests', async t => {
-  const store = new MockStore(stores)
-  const http = nock('http://domain.com').get('/resource/1').reply(200)
+test('Throws an error if a duplicate request is in progress', async t => {
+  const store = suplex(MockModel, 'id')
+  const http = nock('http://domain.com').get('/').reply(200)
 
-  store._fetch('http://domain.com/resource/1')
-  const error = await t.throws(store._fetch('http://domain.com/resource/1'))
+  store.fetch('http://domain.com/')
+  const error = await t.throws(store.fetch('http://domain.com/'))
 
   t.is(error.message, 'Duplicate request')
   http.done()
 
   nock.cleanAll()
+})
+
+test('Quick start example in the README', async t => {
+  // Start by defining a model
+  class User {
+    id: 0
+    name: ''
+    email: ''
+  }
+
+  // Then, create a store to manage those models
+  class UserStore {
+    suplex: any
+
+    constructor() {
+      this.suplex = suplex(User, 'id')
+    }
+
+    // Let's make an array to hold all the users
+    all = []
+
+    // And a function to fetch a list of users from some API
+    async fetchAll() {
+      const response = await this.suplex.fetch(
+        'http://jsonplaceholder.typicode.com/users'
+      )
+      this.all = this.suplex.load(response.body)
+    }
+  }
+
+  // Now, use it!
+  const userStore = new UserStore()
+
+  await userStore.fetchAll()
+
+  t.is(userStore.all.length, 10)
 })
