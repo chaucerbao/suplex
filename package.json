@@ -1,7 +1,7 @@
 {
   "name": "@chaucerbao/suplex",
   "description": "A simple, yet efficient, store management library",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "Alvin Chan <no@email.com>",
   "license": "MIT",
   "main": "dist/index.js",
