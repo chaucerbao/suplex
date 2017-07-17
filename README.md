@@ -11,9 +11,9 @@ npm install --save @chaucerbao/suplex
 Create your own models and stores, then attach Suplex
 
 ```ts
-import Suplex from '@chaucerbao/suplex'
+import suplex from '@chaucerbao/suplex'
 
-// Start by defining a model
+// Start by defining some model
 class User {
   id: 0
   name: ''
@@ -28,22 +28,29 @@ class UserStore {
     this.suplex = suplex(User, 'id')
   }
 
-  // Let's make an array to hold all the users
+  // Make an array to hold all the users
   all = []
 
-  // And a function to fetch a list of users from some API
+  // And a function to fetch and load a list of users from some API
   async fetchAll() {
-    const response = await this.suplex.fetch('http://jsonplaceholder.typicode.com/users')
+    const response = await this.suplex.fetch(
+      '//jsonplaceholder.typicode.com/users'
+    )
     this.all = this.suplex.load(response.body)
   }
 }
 
-// Now, use it!
+// Now, initialize the store
 const userStore = new UserStore()
 
-await userStore.fetchAll()
+// And access your data!
+async function callApi() {
+  await userStore.fetchAll()
 
-console.log(userStore.all)
+  console.log(userStore.all.length)
+}
+
+callApi()
 ```
 
 ## Usage

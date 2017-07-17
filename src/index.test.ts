@@ -143,8 +143,8 @@ test('Throws an error if a duplicate request is in progress', async t => {
   nock.cleanAll()
 })
 
-test('Quick start example in the README', async t => {
-  // Start by defining a model
+test.cb('Quick start example in the README', t => {
+  // Start by defining some model
   class User {
     id: 0
     name: ''
@@ -159,22 +159,28 @@ test('Quick start example in the README', async t => {
       this.suplex = suplex(User, 'id')
     }
 
-    // Let's make an array to hold all the users
+    // Make an array to hold all the users
     all = []
 
-    // And a function to fetch a list of users from some API
+    // And a function to fetch and load a list of users from some API
     async fetchAll() {
       const response = await this.suplex.fetch(
-        'http://jsonplaceholder.typicode.com/users'
+        '//jsonplaceholder.typicode.com/users'
       )
       this.all = this.suplex.load(response.body)
     }
   }
 
-  // Now, use it!
+  // Now, initialize the store
   const userStore = new UserStore()
 
-  await userStore.fetchAll()
+  // And access your data!
+  async function callApi() {
+    await userStore.fetchAll()
 
-  t.is(userStore.all.length, 10)
+    t.is(userStore.all.length, 10)
+    t.end()
+  }
+
+  callApi()
 })
