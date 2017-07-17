@@ -17,6 +17,24 @@ test('Create a SuplexStore instance', t => {
   t.is(store.constructor.name, 'SuplexStore')
 })
 
+test('Retrieve the same instance of a model', t => {
+  const store = suplex(MockModel, 'id')
+
+  const modelA = store.get('key')
+  const modelB = store.get('key')
+
+  t.is(modelB, modelA)
+})
+
+test('Retrieve the same instance of a model when given variants of the same key', t => {
+  const store = suplex(MockModel, 'id')
+
+  const modelA = store.get(1)
+  const modelB = store.get('1')
+
+  t.is(modelB, modelA)
+})
+
 test('Retrieve different instances of a model when given different keys', t => {
   const store = suplex(MockModel, 'id')
 
@@ -25,15 +43,6 @@ test('Retrieve different instances of a model when given different keys', t => {
 
   t.deepEqual(modelB, modelA)
   t.not(modelB, modelA)
-})
-
-test('Create and retrieve the same instance of a model', t => {
-  const store = suplex(MockModel, 'id')
-
-  const modelA = store.get('key')
-  const modelB = store.get('key')
-
-  t.is(modelB, modelA)
 })
 
 test('Retrieve and update properties of a model', t => {

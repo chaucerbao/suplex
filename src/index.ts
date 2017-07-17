@@ -50,11 +50,11 @@ export class SuplexStore {
   /**
    * Retrieve a model and, optionally, update its properties
    *
-   * @param {string} id - Value of the model's identifier
+   * @param {(string|number)} id - Value of the model's identifier
    * @param {Object} [props] - Properties to update
    * @return {Model} The model's instance
    */
-  get(id: string, props?: JsonObject): IModel {
+  get(id: string | number, props?: JsonObject): IModel {
     if (typeof this.cache[id] === 'undefined') {
       this.cache[id] = new this.Model() as IModel
     }
