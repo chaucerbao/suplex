@@ -1,5 +1,5 @@
 {
-  "name": "suplex",
+  "name": "@chaucerbao/suplex",
   "description": "A simple, yet efficient, store management library",
   "version": "0.1.0",
   "author": "Alvin Chan <no@email.com>",

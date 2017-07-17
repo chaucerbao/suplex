@@ -4,14 +4,14 @@ A simple, yet efficient, store management library
 ## Installation
 
 ```
-npm install --save suplex
+npm install --save @chaucerbao/suplex
 ```
 
 ## Quick Start
 Create your own models and stores, then attach Suplex
 
 ```
-import Suplex from 'suplex'
+import Suplex from '@chaucerbao/suplex'
 
 // Start by defining a model
 class User {
