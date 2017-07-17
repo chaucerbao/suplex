@@ -34,7 +34,7 @@ export class SuplexStore {
   private Model: IModel
 
   /** Property name of the model's identifier */
-  private modelId: string
+  private idProp: string
 
   /** Stores all instances of the models */
   private cache: Cache<IModel> = {}
@@ -42,9 +42,9 @@ export class SuplexStore {
   /** Keeps track of pending HTTP requests */
   private pendingRequests: PendingRequests = {}
 
-  constructor(Model: IModel, modelId: string) {
+  constructor(Model: IModel, idProp: string) {
     this.Model = Model
-    this.modelId = modelId
+    this.idProp = idProp
   }
 
   /**
@@ -88,7 +88,7 @@ export class SuplexStore {
     collection: JsonObject[],
     transform = (o: JsonObject): JsonObject => o
   ): IModel[] {
-    return collection.map(o => this.get(o[this.modelId], transform(o)))
+    return collection.map(o => this.get(o[this.idProp], transform(o)))
   }
 
   /**
@@ -129,5 +129,4 @@ export class SuplexStore {
   }
 }
 
-export default (Model: IModel, modelId: string) =>
-  new SuplexStore(Model, modelId)
+export default (Model: IModel, idProp: string) => new SuplexStore(Model, idProp)
