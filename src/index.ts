@@ -30,22 +30,16 @@ class FetchError extends Error {
 
 /** SuplexStore */
 export class SuplexStore {
-  /** The model's class declaration */
-  private Model: IModel
-
-  /** Property name of the model's identifier */
-  private idProp: string
-
   /** Stores all instances of the models */
   private cache: Cache<IModel> = {}
 
   /** Keeps track of pending HTTP requests */
   private pendingRequests: PendingRequests = {}
 
-  constructor(Model: IModel, idProp: string) {
-    this.Model = Model
-    this.idProp = idProp
-  }
+  constructor(
+    private readonly Model: IModel,
+    private readonly idProp: string
+  ) {}
 
   /**
    * Retrieve a model and, optionally, update its properties
