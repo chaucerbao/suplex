@@ -47,7 +47,7 @@ const userStore = new UserStore()
 async function callApi() {
   await userStore.fetchAll()
 
-  console.log(userStore.all.length)
+  console.log(userStore.all)
 }
 
 callApi()
